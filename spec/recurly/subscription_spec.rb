@@ -5,7 +5,10 @@ describe Subscription do
     subject { Subscription }
 
     it "has all expected attributes" do
-      expected_attributes = %w{ uuid
+      expected_attributes = %w{ account_code
+                                plan_code
+                                plan_name
+                                uuid
                                 state
                                 unit_amount_in_cents
                                 cost_in_cents
@@ -180,6 +183,12 @@ describe Subscription do
       )
       Subscription.find 'inactive'
     }
+
+    describe "#account_code" do
+      it "should return account_code" do
+        active.account_code.must_equal 'account_code'
+      end
+    end
 
     describe "#cancel" do
       it "must cancel an active subscription" do

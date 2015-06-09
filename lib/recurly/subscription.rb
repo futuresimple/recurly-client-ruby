@@ -26,6 +26,9 @@ module Recurly
     has_one :invoice
 
     define_attribute_methods %w(
+      plan_code
+      plan_name
+      account_code
       uuid
       state
       unit_amount_in_cents

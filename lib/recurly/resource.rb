@@ -427,6 +427,23 @@ module Recurly
               record[el.name] = val
             end
           end
+
+          if el.name == 'account' && el.attribute('href')
+            record['account_code'] = el.attribute('href').value.split('/').last
+          end
+          if el.name == 'coupon' && el.attribute('href')
+            record['coupon_code'] = el.attribute('href').value.split('/').last
+          end
+          if el.name == 'invoice' && el.attribute('href')
+            record['invoice_number'] = el.attribute('href').value.split('/').last
+          end
+          if el.name == 'plan'
+            if el.attribute('href')
+              record['plan_code'] = el.attribute('href').value.split('/').last
+            end
+            plan_name_tag = el.children.select { |child| child.class == REXML::Element && child.name == 'name' }.first
+            record['plan_name'] = plan_name_tag.children.first if plan_name_tag
+          end
         end
 
         record.persist! if record.respond_to? :persist!

@@ -17,6 +17,7 @@ module Recurly
     belongs_to :subscription
 
     define_attribute_methods %w(
+      invoice_number
       uuid
       state
       description

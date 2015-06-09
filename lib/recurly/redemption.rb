@@ -13,6 +13,7 @@ module Recurly
     belongs_to :account, :readonly => false
 
     define_attribute_methods %w(
+      account_code
       single_use
       total_discounted_in_cents
       currency
