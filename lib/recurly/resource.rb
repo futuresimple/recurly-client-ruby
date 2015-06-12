@@ -444,8 +444,15 @@ module Recurly
             if el.attribute('href')
               record['plan_code'] = el.attribute('href').value.split('/').last
             end
-            plan_name_tag = el.children.select { |child| child.class == REXML::Element && child.name == 'name' }.first
-            record['plan_name'] = plan_name_tag.children.first if plan_name_tag
+            # REXML::Element or Nokogiri::XML::Element
+            plan_name_tag = el.children.find { |child| child.class.to_s.include?("Element") && child.name == 'name' }
+            if plan_name_tag
+              if plan_name_tag.children.first.respond_to?(:content)
+                record['plan_name'] = plan_name_tag.children.first.content
+              else
+                record['plan_name'] = plan_name_tag.children.first
+              end
+            end
           end
         end
 
