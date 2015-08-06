@@ -28,6 +28,7 @@ module Recurly
     end
 
     define_attribute_methods %w(
+      subscription_uuid
       original_invoice_number
       account_code
       uuid
