@@ -42,6 +42,7 @@ module Recurly
       transaction_error
       source
       ip_address
+      invoice_number
     )
     alias to_param uuid
 

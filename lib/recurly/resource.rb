@@ -443,6 +443,9 @@ module Recurly
           if el.name == 'subscription' && el.attribute('href')
             record['subscription_uuid'] = el.attribute('href').value.split('/').last
           end
+          if el.name == 'invoice' && el.attribute('href')
+            record['invoice_number'] = el.attribute('href').value.split('/').last
+          end
           if el.name == 'plan'
             if el.attribute('href')
               record['plan_code'] = el.attribute('href').value.split('/').last
