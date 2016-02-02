@@ -23,7 +23,7 @@ module Recurly
     belongs_to :plan
 
     # @return [Invoice]
-    has_one :invoice
+    has_many :invoices
 
     # @return [Redemption]
     has_many :redemptions
