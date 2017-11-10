@@ -5,23 +5,29 @@ module Recurly
     # @macro [attach] scope
     #   @scope class
     #   @return [Pager] a pager that yields +$1+ transactions.
-    scope :authorizations, :type  => 'authorization'
-    scope :purchases,      :type  => 'purchase'
-    scope :refunds,        :type  => 'refund'
-
-    scope :successful,     :state => 'successful'
-    scope :failed,         :state => 'failed'
-    scope :voided,         :state => 'voided'
+    scope :authorizations, type: 'authorization'
+    scope :purchases,      type: 'purchase'
+    scope :refunds,        type: 'refund'
+    scope :successful,     state: 'successful'
+    scope :failed,         state: 'failed'
+    scope :voided,         state: 'voided'
 
     # @return [Account]
     belongs_to :account
-		# @return [Invoice, nil]
-		belongs_to :invoice
-		# @return [Subscription, nil]
-		belongs_to :subscription
+    # @return [Invoice, nil]
+    belongs_to :invoice
+    # @return [Subscription, nil]
+    belongs_to :subscription
+
+    # @return [Pager<Subscription>, nil]
+    has_many :subscriptions
+
+    # @return [Transaction, nil]
+    has_one :original_transaction, class_name: :Transaction, readonly: true
 
     define_attribute_methods %w(
       account_code
+      id
       uuid
       action
       amount_in_cents
@@ -38,19 +44,37 @@ module Recurly
       avs_result
       avs_result_street
       created_at
+      updated_at
       details
       transaction_error
       source
       ip_address
       invoice_number
+      collected_at
+      description
+      tax_exempt
+      tax_code
+      accounting_code
+      fraud
+      product_code
+      gateway_type
+      origin
+      message
+      approval_code
     )
     alias to_param uuid
+    alias fraud_info fraud
+
+    def self.to_xml(attrs)
+      transaction = new attrs
+      transaction.to_xml
+    end
 
     # @return ["credit", "charge", nil] The type of transaction.
     attr_reader :type
 
     # @see Resource#initialize
-    def initialize attributes = {}
+    def initialize(attributes = {})
       super({ :currency => Recurly.default_currency }.merge attributes)
     end
 

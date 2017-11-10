@@ -62,6 +62,20 @@ describe Account do
         error.message.must_equal 'No charges to invoice'
       end
     end
+
+    describe "#shipping_addresses" do
+      it "must return shipping addresses" do
+        stub_api_request(
+          :get,
+          'accounts/abcdef1234567890/shipping_addresses',
+          'shipping_addresses/index-200'
+        )
+
+        shads = account.shipping_addresses.all
+        shads.length.must_equal 1
+        shads.first.must_be_instance_of Recurly::ShippingAddress
+      end
+    end
   end
 
   describe ".find" do
@@ -72,6 +86,7 @@ describe Account do
       account.account_code.must_equal 'abcdef1234567890'
       account.username.must_equal 'shmohawk58'
       account.email.must_equal 'larry.david@example.com'
+      account.cc_emails.must_equal 'cheryl.hines@example.com,richard.lewis@example.com'
       account.first_name.must_equal 'Larry'
       account.last_name.must_equal 'David'
       account.accept_language.must_equal 'en-US'
@@ -84,6 +99,10 @@ describe Account do
       account.address.phone.must_equal '8015551234'
       account.address.country.must_equal 'US'
       account.vat_location_valid.must_equal true
+      account.has_live_subscription.must_equal true
+      account.has_active_subscription.must_equal true
+      account.has_future_subscription.must_equal false
+      account.has_past_due_invoice.must_equal false
     end
 
     it 'must return an account with tax state' do
@@ -180,6 +199,22 @@ XML
     end
   end
 
+  describe "#changed_attributes" do
+    let(:account) do
+      stub_api_request :get, 'accounts/abcdef1234567890', 'accounts/show-200'
+      Account.find 'abcdef1234567890'
+    end
+
+    it "should be dirty if address was modified" do
+      account.address.address1 = "1600 Pennsylvania Ave."
+      account.changed?.must_equal true
+    end
+
+    it "should be clean if address was not modified" do
+      account.changed?.must_equal false
+    end
+  end
+
   describe "#to_xml" do
     it "must serialize" do
       account = Account.new :username => 'importantbreakfast'
@@ -208,6 +243,22 @@ XML
       }
       it "retrieves associations" do
         account.subscriptions.first.must_be_instance_of Subscription
+      end
+    end
+
+    describe "when account has a balance" do
+      let(:account) {
+        stub_api_request :get, 'accounts/abcdef1234567890', 'accounts/show-200'
+        stub_api_request :get, 'accounts/abcdef1234567890/balance', 'account_balance/show-200'
+        Account.find 'abcdef1234567890'
+      }
+
+      it "is able to retrieve and parse account balance" do
+        account_balance = account.account_balance
+        account_balance.past_due.must_equal true
+        balance = account_balance.balance_in_cents
+        balance[:USD].must_equal(2910)
+        balance[:EUR].must_equal(-520)
       end
     end
   end

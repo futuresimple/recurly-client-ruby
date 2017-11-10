@@ -4,15 +4,25 @@ script:
   - gem build recurly.gemspec
 cache: bundler
 sudo: false
+before_install:
+  - gem update bundler
 rvm:
-  - jruby
+  - jruby-9.1.9.0
+  - jruby-9000
   - 1.9.3
   - 2.0.0
   - 2.1.0
+  - 2.2.4
+  - 2.3.0
+  - 2.4.0
 env:
   - XML=rexml
   - XML=nokogiri
 matrix:
   allow_failures:
-    - rvm: jruby-19mode
+    - rvm: 1.9.3
+      env: XML=nokogiri
+    - rvm: 2.0.0
+      env: XML=nokogiri
+    - rvm: jruby
       env: XML=nokogiri

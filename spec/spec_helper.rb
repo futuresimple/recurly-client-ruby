@@ -1,8 +1,11 @@
 require 'environment'
+require 'logger'
 require 'cgi'
 require 'minitest/autorun'
 require 'minitest/spec'
 require 'webmock'
+
+WebMock.enable!
 
 module SpecHelper
   include WebMock::API
@@ -14,23 +17,42 @@ module SpecHelper
 
   def stub_api_request method, uri, fixture = nil
     uri = API.base_uri + uri
-    uri.user = CGI.escape Recurly.api_key
-    uri.password = ''
     response = if block_given?
       yield
     else
       File.read File.expand_path("../fixtures/#{fixture}.xml", __FILE__)
     end
-    stub_request(method, uri.to_s).to_return response
+    stub_request(method, uri.to_s)
+      .with(
+        basic_auth: [CGI.escape(Recurly.api_key), ''],
+        headers: Recurly::API.headers
+      )
+      .to_return(response)
+  end
+
+  def reset_recurly_environment!
+    Recurly.subdomain = 'api'
+    Recurly.api_key = 'api_key'
+    Recurly.default_currency = 'USD'
+    Recurly.logger = Logger.new nil
   end
 end
-include SpecHelper
+
+class Minitest::Spec
+  include SpecHelper
+  
+  before do |tests|
+    WebMock.reset!
+    reset_recurly_environment!
+  end
+end
 
 XML = {
   200 => {
     :index   => [
       <<EOR,
 HTTP/1.1 200 OK
+Content-Type: application/xml; charset=utf-8
 Link: \
 <https://api.recurly.com/v2/resources?per_page=2&cursor=1234567890>; rel="next"
 X-Records: 3
@@ -46,6 +68,7 @@ X-Records: 3
 EOR
       <<EOR
 HTTP/1.1 200 OK
+Content-Type: application/xml; charset=utf-8
 Link: \
 <https://api.recurly.com/v2/resources?per_page=2>; rel="start"
 X-Records: 3
@@ -59,6 +82,7 @@ EOR
     ],
     :show    => <<EOR,
 HTTP/1.1 200 OK
+Content-Type: application/xml; charset=utf-8
 
 <resource>
   <name>Spock</name>
@@ -66,6 +90,7 @@ HTTP/1.1 200 OK
 EOR
     :update  => <<EOR,
 HTTP/1.1 200 OK
+Content-Type: application/xml; charset=utf-8
 
 <resource>
   <name>Persistent Little Bug</name>

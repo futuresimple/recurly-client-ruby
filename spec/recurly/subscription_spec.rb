@@ -52,6 +52,7 @@ describe Subscription do
         currency: 'EUR',
         terms_and_conditions: 'Some Terms and Conditions',
         customer_notes: 'Some Customer Notes',
+        imported_trial: true,
         account: {
           account_code: '1',
           email: 'verena@example.com',
@@ -149,6 +150,22 @@ describe Subscription do
       subscription = Subscription.new :add_ons => [:trial, :trial]
       subscription.add_ons.to_a.must_equal([
         SubscriptionAddOn.new("add_on_code"=>"trial", "quantity"=>2)
+      ])
+    end
+
+    it "must accumulate quantity if new addon has quantity" do
+      subscription = Subscription.new :add_ons => [:trial, :trial]
+      subscription.add_ons << SubscriptionAddOn.new(add_on_code: :trial, quantity: 3)
+      subscription.add_ons.to_a.must_equal([
+        SubscriptionAddOn.new(add_on_code: :trial, quantity: 5)
+      ])
+    end
+
+    it "must assume new addon has a quantity of 1 if not specified" do
+      subscription = Subscription.new :add_ons => [:trial, :trial]
+      subscription.add_ons << SubscriptionAddOn.new(add_on_code: :trial)
+      subscription.add_ons.to_a.must_equal([
+        SubscriptionAddOn.new(add_on_code: :trial, quantity: 3)
       ])
     end
 
@@ -324,6 +341,7 @@ describe Subscription do
       subscription.invoice.must_be_instance_of Invoice
     end
   end
+
   describe 'notes' do
     it 'previews new subscriptions' do
       stub_api_request :get, 'subscriptions/abcdef1234567890', 'subscriptions/show-200'
@@ -342,6 +360,72 @@ describe Subscription do
       subscription.customer_notes.must_equal notes[:customer_notes]
       subscription.terms_and_conditions.must_equal notes[:terms_and_conditions]
       subscription.vat_reverse_charge_notes.must_equal notes[:vat_reverse_charge_notes]
+    end
+  end
+
+  describe 'redemptions' do
+    it 'should return Redemption objects' do
+      stub_api_request :get, 'subscriptions/abcdef1234567890', 'subscriptions/show-200'
+      stub_api_request :get, 'subscriptions/abcdef1234567890/redemptions', 'subscriptions/redemptions-200'
+
+      subscription = Subscription.find 'abcdef1234567890'
+
+      redemptions = subscription.redemptions
+
+      redemptions.length.must_equal 2
+      redemptions.all? { |r| r.is_a? Redemption }.must_equal true
+    end
+  end
+
+  describe '#update_attributes' do
+    describe 'when the plan code does change' do
+      it 'sends all updated atributes to the server' do
+        stub_api_request :get, 'subscriptions/abcdef1234567890', 'subscriptions/show-200'
+
+        subscription = Subscription.find 'abcdef1234567890'
+
+        stub_request(:put, "https://api.recurly.com/v2/subscriptions/abcdef1234567890").
+          with(:body => "<subscription><plan_code>abc</plan_code><quantity>1</quantity><unit_amount_in_cents>1500</unit_amount_in_cents></subscription>",
+               :headers => Recurly::API.headers).
+          to_return(:status => 200, :body => "", :headers => {})
+
+        subscription.update_attributes({ plan_code: 'abc', quantity: 1, unit_amount_in_cents: 1500 })
+      end
+    end
+  end
+
+  describe '#update_attributes' do
+    describe 'when the plan code does not change' do
+      it 'sends only changed attributes to the server' do
+        stub_api_request :get, 'subscriptions/abcdef1234567890', 'subscriptions/show-200'
+
+        subscription = Subscription.find 'abcdef1234567890'
+
+        stub_request(:put, "https://api.recurly.com/v2/subscriptions/abcdef1234567890").
+          with(:body => "<subscription><plan_code>plan_code</plan_code><unit_amount_in_cents>1500</unit_amount_in_cents></subscription>",
+               :headers => Recurly::API.headers).
+          to_return(:status => 200, :body => "", :headers => {})
+
+        subscription.update_attributes({ plan_code: 'plan_code', quantity: 1, unit_amount_in_cents: 1500 })
+      end
+    end
+  end
+
+  describe "#shipping_address" do
+    it "should be able to find shipping address" do
+      stub_api_request(
+        :get,
+        'subscriptions/abcdef1234567890',
+        'subscriptions/show-200'
+      )
+      stub_api_request(
+        :get,
+        'subscriptions/abcdef1234567890/shipping_address',
+        'shipping_addresses/show-200'
+      )
+      subscription = Recurly::Subscription.find("abcdef1234567890")
+      shad = subscription.shipping_address
+      shad.must_be_instance_of Recurly::ShippingAddress
     end
   end
 end

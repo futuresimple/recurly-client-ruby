@@ -20,6 +20,24 @@ describe Recurly.js do
       Recurly.js.private_key = nil
       proc { Recurly.js.private_key }.must_raise ConfigurationError
     end
+
+    it "must use defaults set if not sent in new thread" do
+      Recurly.js.private_key = 'testprivate'
+
+      Thread.new {
+        Recurly.js.private_key.must_equal 'testprivate'
+      }
+
+    end
+
+    it "must use new values set in thread context" do
+      Recurly.js.private_key = 'testprivate'
+      Thread.new {
+        Recurly.config(private_key: "newprivate")
+        Recurly.js.private_key.must_equal 'newprivate'
+      }
+      Recurly.js.private_key.must_equal 'testprivate'
+    end
   end
 
   describe "public_key" do
@@ -117,6 +135,7 @@ EOS
 
       it "must sign subscription request" do
         subscription = Subscription.new :plan_code => 'gold'
+        subscription.currency = 'USD'
         account = Account.new :account_code => '123'
         Recurly.js.sign(subscription, account).must_equal <<EOS.chomp
 c74db6318765b7f3e0e31ad54a7773000646df0b|\
@@ -130,6 +149,7 @@ EOS
 
       it "must sign transaction request" do
         transaction = Transaction.new :amount_in_cents => 50_00
+        transaction.currency = 'USD'
         transaction.persist!
         account = Account.new :account_code => '123'
         Recurly.js.sign(transaction, account).must_equal <<EOS.chomp
