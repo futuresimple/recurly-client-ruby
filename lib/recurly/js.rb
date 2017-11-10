@@ -3,9 +3,7 @@ require 'base64'
 require 'cgi'
 
 module Recurly
-  # @deprecated Please use the new Recurly.js tokenization system https://dev.recurly.com/docs/recurlyjs
-  #
-  # A collection of helper methods to use to verify the old
+  # A collection of helper methods to use to verify
   # {Recurly.js}[http://js.recurly.com/] callbacks.
   module JS
     # Raised when signature verification fails.
@@ -20,10 +18,6 @@ module Recurly
       # @return [String] A private key for Recurly.js.
       # @raise [ConfigurationError] No private key has been set.
       def private_key
-        if Thread.current[:recurly_config] && Thread.current[:recurly_config][:private_key]
-          return Thread.current[:recurly_config][:private_key]
-        end
-
         defined? @private_key and @private_key or raise(
           ConfigurationError, "private_key not configured"
         )

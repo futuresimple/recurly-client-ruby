@@ -1,10 +1,8 @@
 module Recurly
   # Invoices are created through account objects.
   #
-  # Recurly Documentation: https://dev.recurly.com/docs/list-invoices
-  #
   # @example
-  #   account = Account.find(account_code)
+  #   account = Account.find account_code
   #   account.invoice!
   class Invoice < Resource
     # @macro [attach] scope
@@ -17,36 +15,14 @@ module Recurly
 
     # @return [Account]
     belongs_to :account
-
     # @return [Subscription]
     belongs_to :subscription
-
-    # @return [Pager<Subscription>, []]
-    has_many :subscriptions
-
     # @return [Invoice]
-    belongs_to :original_invoice, class_name: :Invoice
+    belongs_to :original_invoice, class_name: 'Invoice'
 
-    # This will only be present if the invoice has > 500 line items
-    # @return [Pager<Adjustment>, []]
-    has_many :all_line_items, class_name: :Adjustment
+    # @return [Redemption]
+    has_one :redemption
 
-    # @return [Pager<Redemption>, []]
-    has_many :redemptions
-
-    # @return [Pager<ShippingAddress>, [ShippingAddress], []]
-    has_one :shipping_address, resource_class: :ShippingAddress, readonly: true
-
-    # Returns the first redemption in the Invoice's redemptions.
-    # This was placed here for backwards compatibility when we went from
-    # having a single redemption per invoice to multiple redemptions per invoice.
-    #
-    # @deprecated Use {#redemptions} and find the redemption you want.
-    def redemption
-      redemptions.first
-    end
-
-    # @return [String] The invoice number with the prefix (if there is one)
     def invoice_number_with_prefix
       "#{invoice_number_prefix}#{invoice_number}"
     end
@@ -69,7 +45,6 @@ module Recurly
       total_in_cents
       currency
       created_at
-      updated_at
       closed_at
       amount_remaining_in_cents
       line_items
@@ -79,12 +54,6 @@ module Recurly
       address
       net_terms
       collection_method
-      tax_types
-      refund_tax_date
-      refund_geo_code
-      subtotal_after_discount_in_cents
-      attempt_next_collection_at
-      recovery_reason
     )
     alias to_param invoice_number_with_prefix
 
@@ -113,29 +82,8 @@ module Recurly
       true
     end
 
-    # Initiate a collection attempt on an invoice.
-    #
-    # @return [true, false] +true+ when successful, +false+ when unable to
-    #   (e.g., the invoice has already been collected, a collection attempt was already made)
-    def force_collect
-      return false unless link? :force_collect
-      reload follow_link :force_collect
-      true
-    end
-
-    # Posts an offline payment on this invoice
-    #
-    # @return [Transaction]
-    # @raise [Error] If the transaction fails.
-    def enter_offline_payment(attrs={})
-      Transaction.from_response API.post("#{uri}/transactions", attrs.empty? ? nil : Transaction.to_xml(attrs))
-    rescue Recurly::API::UnprocessableEntity => e
-      raise Invalid, e.message
-    end
-
-    # Fetches the pdf for this invoice
     def pdf
-      self.class.find(to_param, format: 'pdf')
+      self.class.find to_param, :format => 'pdf'
     end
 
     # Refunds specific line items on the invoice.
@@ -144,10 +92,10 @@ module Recurly
     # refundable.
     # @raise [Error] If the refund fails.
     # @param line_items [Array, nil] An array of line items to refund.
-    def refund line_items = nil, refund_apply_order = 'credit'
+    def refund line_items = nil
       return false unless link? :refund
       refund = self.class.from_response(
-        follow_link :refund, :body => refund_line_items_to_xml(line_items, refund_apply_order)
+        follow_link :refund, :body => refund_line_items_to_xml(line_items)
       )
       refund
     end
@@ -158,10 +106,10 @@ module Recurly
     # refundable.
     # @raise [Error] If the refund fails.
     # @param amount_in_cents [Integer, nil] The amount (in cents) to refund.
-    def refund_amount amount_in_cents = nil, refund_apply_order = 'credit'
+    def refund_amount amount_in_cents = nil
       return false unless link? :refund
       refund = self.class.from_response(
-        follow_link :refund, :body => refund_amount_to_xml(amount_in_cents, refund_apply_order)
+        follow_link :refund, :body => refund_amount_to_xml(amount_in_cents)
       )
       refund
     end
@@ -172,21 +120,18 @@ module Recurly
 
     private
 
-    def initialize(attributes = {})
+    def initialize attributes = {}
       super({ :currency => Recurly.default_currency }.merge attributes)
     end
 
-    def refund_amount_to_xml amount_in_cents = nil, refund_apply_order
+    def refund_amount_to_xml amount_in_cents=nil
       builder = XML.new("<invoice/>")
-      builder.add_element 'refund_apply_order', refund_apply_order
       builder.add_element 'amount_in_cents', amount_in_cents
       builder.to_s
     end
 
-    def refund_line_items_to_xml line_items = [], refund_apply_order
+    def refund_line_items_to_xml line_items = []
       builder = XML.new("<invoice/>")
-      builder.add_element 'refund_apply_order', refund_apply_order
-
       node = builder.add_element 'line_items'
       line_items.each do |line_item|
         adj_node = node.add_element 'adjustment'

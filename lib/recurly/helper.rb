@@ -17,10 +17,7 @@ module Recurly
     end
 
     def singularize word
-      word = word.to_s
-      return word if word.end_with?('address')
-      return "shipping_address" if word == "shipping_addresses"
-      word.sub(/s$/, '').sub(/ie$/, 'y')
+      word.to_s.sub(/s$/, '').sub(/ie$/, 'y')
     end
 
     def underscore camel_cased_word

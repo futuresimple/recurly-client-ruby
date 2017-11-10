@@ -44,19 +44,6 @@ module Recurly
       #   if the loaded page content has not changed.
       # @option options [String] :uri The default location the pager will
       #   request.
-      # @option options [String, Symbol] :sort The attribute that will be used to order
-      #   records: <tt>created_at</tt>, <tt>updated_at</tt>. Defaults to <tt>created_at</tt>.
-      # @option options [String, Symbol] :order The order in which records will be
-      #   returned: <tt>asc</tt> for ascending order, <tt>desc</tt> for descending order.
-      #   Defaults to <tt>desc</tt>.
-      # @option options [DateTime, String] :begin_time Operates on the attribute specified by the
-      #   <tt>sort</tt> parameter. Filters records to only include those with datetimes
-      #   greater than or equal to the supplied datetime. Accepts an ISO 8601
-      #   date or date and time.
-      # @option options [DateTime, String] :end_time Operates on the attribute specified by
-      #   the <tt>sort</tt> parameter. Filters records to only include those with
-      #   datetimes less than or equal to the supplied datetime. Accepts an
-      #   ISO 8601 date or date and time.
       # @raise [API::NotModified] If the <tt>:etag</tt> option is set and
       #   matches the server's.
       def initialize resource_class, options = {}
@@ -65,12 +52,7 @@ module Recurly
         @uri    = options.delete :uri
         @etag   = options.delete :etag
         @resource_class, @options = resource_class, options
-        @collection = nil
-      end
-
-      # @return [Boolean] whether or not the xml element is present
-      def any?
-        !@uri.nil?
+        @collection = @count = nil
       end
 
       # @return [String] The URI of the paginated resource.
@@ -81,7 +63,7 @@ module Recurly
       # @return [Integer] The total record count of the resource in question.
       # @see Resource.count
       def count
-        API.head(uri, @options)['X-Records'].to_i
+        @count ||= API.head(uri, @options)['X-Records'].to_i
       end
 
       # @return [Array] Iterates through the current page of records.
@@ -134,7 +116,7 @@ module Recurly
       #   Recurly::Account.active.paginate :per_page => 20
       def paginate options = {}
         dup.instance_eval {
-          @collection = @etag = nil
+          @collection = @count = @etag = nil
           @options = @options.merge options
           self
         }
@@ -174,17 +156,6 @@ module Recurly
         new(attributes) { |record| record.save }
       end
 
-      # Instantiates a record in the scope of the pager.
-      #
-      # @return [Resource] The record.
-      # @example
-      #   account = Recurly::Account.find 'schrader'
-      #   subscription = account.subscriptions.build attributes
-      # @see Resource.new
-      def build attributes = {}
-        new(attributes)
-      end
-
       # Instantiates and saves a record in the scope of the pager.
       #
       # @return [Resource] The saved record.
@@ -220,6 +191,7 @@ module Recurly
         response = API.get uri, params, options
 
         @etag = response['ETag']
+        @count = response['X-Records'].to_i
         @links = {}
         if links = response['Link']
           links.scan(/<([^>]+)>; rel="([^"]+)"/).each do |link, rel|

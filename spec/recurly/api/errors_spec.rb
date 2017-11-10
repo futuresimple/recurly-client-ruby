@@ -33,7 +33,7 @@ describe Recurly::API::ResponseError do
       end
 
       describe "when response body is empty string" do
-        before { 2.times { response.expect :body, '' } }
+        before { response.expect :body, '' }
 
         it "must return nil" do
           error.send(:xml).must_equal nil
@@ -41,7 +41,7 @@ describe Recurly::API::ResponseError do
       end
 
       describe "when response body is xml" do
-        before {  3.times { response.expect :body, xml } }
+        before { response.expect :body, xml }
 
         it "must return instance of Recurly::XML" do
           error.send(:xml).must_be_instance_of Recurly::XML

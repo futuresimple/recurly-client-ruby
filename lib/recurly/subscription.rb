@@ -1,39 +1,29 @@
 module Recurly
   class Subscription < Resource
-    require 'recurly/subscription/add_ons'
+    autoload :AddOns, 'recurly/subscription/add_ons'
 
     # @macro [attach] scope
     #   @scope class
     #   @return [Pager<Subscription>] A pager that yields +$1+ subscriptions.
-    scope :active,   state: :active
-    scope :canceled, state: :canceled
-    scope :expired,  state: :expired
-    scope :future,   state: :future
+    scope :active,   :state => :active
+    scope :canceled, :state => :canceled
+    scope :expired,  :state => :expired
+    scope :future,   :state => :future
     # @return [Pager<Subscription>] A pager that yields subscriptions in
     #   trials.
-    scope :in_trial, state: :in_trial
+    scope :in_trial, :state => :in_trial
     # @return [Pager<Subscription>] A pager that yields active, canceled, and
     #   future subscriptions.
-    scope :live,     state: :live
-    scope :past_due, state: :past_due
-
-    # @return [Pager<Redemption>, []]
-    has_many :redemptions
+    scope :live,     :state => :live
+    scope :past_due, :state => :past_due
 
     # @return [Account]
     belongs_to :account
-
     # @return [Plan]
     belongs_to :plan
 
-    # @return [Invoice, nil]
+    # @return [Invoice]
     has_one :invoice
-
-    # @return [GiftCard, nil]
-    has_one :gift_card
-
-    # @return [ShippingAddress, nil]
-    has_one :shipping_address, resource_class: :ShippingAddress, readonly: false
 
     define_attribute_methods %w(
       plan_code
@@ -45,7 +35,6 @@ module Recurly
       cost_in_cents
       currency
       quantity
-      updated_at
       activated_at
       canceled_at
       expires_at
@@ -56,7 +45,6 @@ module Recurly
       pending_subscription
       subscription_add_ons
       coupon_code
-      coupon_codes
       total_billing_cycles
       remaining_billing_cycles
       net_terms
@@ -72,13 +60,6 @@ module Recurly
       customer_notes
       vat_reverse_charge_notes
       address
-      revenue_schedule_type
-      shipping_address_id
-      timeframe
-      started_with_gift
-      converted_at
-      no_billing_info_reason
-      imported_trial
     )
     alias to_param uuid
 
@@ -95,7 +76,7 @@ module Recurly
     end
 
     # @return [Subscription] A new subscription.
-    def initialize(attributes = {})
+    def initialize attributes = {}
       super({ :currency => Recurly.default_currency }.merge attributes)
     end
 
@@ -123,16 +104,6 @@ module Recurly
         coupon.coupon_code if coupon.respond_to? :coupon_code
       )
       attributes[:coupon] = coupon
-    end
-
-    # Assign Coupon resources (rather than coupon codes).
-    #
-    # @param coupons [[Coupons]]
-    def coupons= coupons
-      self.coupon_codes = coupons.map do |coupon|
-        coupon.coupon_code if coupon.respond_to? :coupon_code
-      end.compact
-      attributes[:coupons] = coupons
     end
 
     # @return [AddOns]
@@ -228,30 +199,8 @@ module Recurly
       true
     end
 
-    # Overrides the behavior of `update_attributes` in Resource class so ensure
-    # all attributes are marked as dirty if the plan code changes
-    def update_attributes attributes = {}
-      clear_attributes_if_plan_code_changed attributes
-      super
-    end
-
-    def update_attributes! attributes = {}
-      clear_attributes_if_plan_code_changed attributes
-      super
-    end
-
     def signable_attributes
       super.merge :plan_code => plan_code
-    end
-
-    private
-
-    def clear_attributes_if_plan_code_changed attributes
-      if attributes[:plan_code] != plan_code
-        attributes.each do |key, value|
-          self.attributes[key.to_s] = nil
-        end
-      end
     end
   end
 end

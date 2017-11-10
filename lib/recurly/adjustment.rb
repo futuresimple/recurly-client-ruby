@@ -1,15 +1,13 @@
 module Recurly
-  # The history of your customer's Recurly account can be tracked through adjustments, made up of credits and charges.
-  #
-  # Recurly Documentation: https://dev.recurly.com/docs/adjustment-object
   class Adjustment < Resource
     # @macro [attach] scope
     #   @scope class
     #   @return [Pager<Adjustment>] a pager that yields +$1+.
-    scope :charges,  type:  'charge'
-    scope :credits,  type:  'credit'
-    scope :pending,  state: 'pending'
-    scope :invoiced, state: 'invoiced'
+    scope :charges,  :type  => 'charge'
+    scope :credits,  :type  => 'credit'
+
+    scope :pending,  :state => 'pending'
+    scope :invoiced, :state => 'invoiced'
 
     # @return [Account, nil]
     belongs_to :account
@@ -34,9 +32,8 @@ module Recurly
       start_date
       end_date
       created_at
-      updated_at
       quantity_remaining
-      revenue_schedule_type
+
       tax_in_cents
       tax_type
       tax_region
@@ -44,7 +41,6 @@ module Recurly
       tax_exempt
       tax_code
       tax_details
-      tax_types
     )
     alias to_param uuid
 
@@ -57,7 +53,7 @@ module Recurly
     # @example
     #   account.adjustments.new attributes
     # @see Resource#initialize
-    def initialize(attributes = {})
+    def initialize attributes = {}
       super({ :currency => Recurly.default_currency }.merge attributes)
     end
 

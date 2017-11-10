@@ -1,5 +1,4 @@
 module Recurly
-  # Recurly Documentation: https://dev.recurly.com/docs/list-plans
   class Plan < Resource
     # @return [Pager<AddOn>, []]
     has_many :add_ons
@@ -25,14 +24,9 @@ module Recurly
       trial_interval_unit
       total_billing_cycles
       accounting_code
-      setup_fee_accounting_code
-      revenue_schedule_type
-      setup_fee_revenue_schedule_type
       tax_exempt
       tax_code
-      trial_requires_billing_info
       created_at
-      updated_at
     )
     alias to_param plan_code
   end

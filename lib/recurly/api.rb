@@ -16,8 +16,6 @@ module Recurly
 
     @@base_uri = "https://api.recurly.com/v2/"
 
-    RECURLY_API_VERSION = '2.8'
-
     FORMATS = Helper.hash_with_indifferent_read_access(
       'pdf' => 'application/pdf',
       'xml' => 'application/xml'
@@ -27,7 +25,7 @@ module Recurly
       # Additional HTTP headers sent with each API call
       # @return [Hash{String => String}]
       def headers
-        @headers ||= { 'Accept' => accept, 'User-Agent' => user_agent, 'X-Api-Version' => RECURLY_API_VERSION }
+        @headers ||= { 'Accept' => accept, 'User-Agent' => user_agent }
       end
 
       # @return [String, nil] Accept-Language header value

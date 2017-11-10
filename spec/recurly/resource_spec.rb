@@ -28,20 +28,6 @@ describe Resource do
   end
 
   describe "class methods" do
-    describe ".from_response" do
-      it "must not accept text/html responses" do
-        stub_api_request(:get, 'resources/123') do
-<<HTML
-HTTP/1.1 200 OK
-Content-Type: text/html; charset=utf-8
-
-<html></html>
-HTML
-        end
-        proc { Resource.find(123) }.must_raise Recurly::Error
-      end
-    end
-
     describe ".define_attribute_methods" do
       it "must define attribute methods" do
         resource.define_attribute_methods(names = %w(charisma endurance))
@@ -79,7 +65,6 @@ HTML
         pager.must_be_instance_of Resource::Pager
         stub_api_request(:get, 'resources?active=true') { <<XML }
 HTTP/1.1 200 OK
-Content-Type: application/xml; charset=utf-8
 
 <resources type="array"/>
 XML
@@ -96,28 +81,6 @@ XML
       it "must raise an error if no record is found" do
         stub_api_request(:get, 'resources/khan') { XML[404] }
         proc { resource.find :khan }.must_raise Resource::NotFound
-      end
-
-      it "must reject empty strings" do
-        proc { resource.find '' }.must_raise Resource::NotFound
-      end
-    end
-
-    describe ".find_each" do
-      it "must accept a block" do
-        stub_api_request(:get, 'resources?per_page=50') { XML[200][:index] }
-        stub_api_request(:get, 'resources?cursor=1234567890&per_page=2') { XML[200][:index] }
-        results = []
-        resource.find_each { |r| r.must_be_instance_of resource ; results << r }
-        results.wont_be_empty
-      end
-
-      it "must allow chaining of iterator methods without passing a block" do
-        stub_api_request(:get, 'resources?cursor=1234567890&per_page=2') { XML[200][:index] }
-        stub_api_request(:get, 'resources?per_page=50') { XML[200][:index] }
-        results = []
-        resource.find_each.to_a.map.each { |r| r.must_be_instance_of resource ; results << r }
-        results.wont_be_empty
       end
     end
 
@@ -191,19 +154,6 @@ XML
           proc { record.follow_link :cancel }.must_raise API::UnprocessableEntity
         end
       end
-
-      it 'should ignore the element and not raise an exception when unknown association is present' do
-        xml = <<XML
-<?xml version="1.0" encoding="UTF-8"?>
-<resource href="https://api.recurly.com/v2/resources/1">
-  <unknown_associations href="https://api.recurly.com/v2/resources/1/unknown_associations"/>
-</resource>
-XML
-
-        record = resource.from_xml(xml)
-        record.uri.must_equal "https://api.recurly.com/v2/resources/1"
-      end
-
     end
 
     describe ".associations" do
@@ -230,12 +180,6 @@ XML
 
       it "must return a pager for fresh records" do
         resource.new.reasons.must_be_kind_of Enumerable
-      end
-
-      it "should not set changed attributes when reading a resource" do
-        record = resource.new
-        record.reasons
-        record.changed_attributes.keys.must_be_empty
       end
     end
 
@@ -264,7 +208,6 @@ XML
       it "must lazily fetch a record and assign a relation" do
         stub_api_request(:get, 'resources/1') { <<XML }
 HTTP/1.1 200 OK
-Content-Type: application/xml; charset=utf-8
 
 <?xml version="1.0" encoding="UTF-8"?>
 <resource>
@@ -275,7 +218,6 @@ XML
         record = resource.find "1"
         stub_api_request(:get, 'resources/1/day') { <<XML }
 HTTP/1.1 200 OK
-Content-Type: application/xml; charset=utf-8
 
 <?xml version="1.0" encoding="UTF-8"?>
 <day>
@@ -347,7 +289,6 @@ XML
         record[:uuid] = 'neo'
         stub_api_request(:get, 'resources/neo') { <<XML }
 HTTP/1.1 200 OK
-Content-Type: application/xml; charset=utf-8
 
 <resource>
   <uuid>neo</uuid>
@@ -547,5 +488,6 @@ XML
         record.valid?.must_equal false
       end
     end
+
   end
 end
